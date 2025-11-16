@@ -45,11 +45,17 @@
     mpd-mpris
     playerctl
 
+    # eBook management
+    calibre
     # Visualization 
     cava
 	
     # Extra gaming
     lutris
+    wineWowPackages.stable
+    protontricks
+    bottles
+    winetricks
     
     # System
     networkmanagerapplet
@@ -279,7 +285,7 @@
       mainBar = {
         layer = "top";
         position = "top";
-        height = 40;
+        height = 20;
         
         modules-left = [ "hyprland/workspaces" "hyprland/mode" ];
         modules-center = [ "hyprland/window" ];

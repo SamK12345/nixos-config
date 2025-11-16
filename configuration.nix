@@ -1,4 +1,4 @@
-	# NixOS configuration for AMD-based Desktop 
+# NixOS configuration for AMD-based Desktop 
 # Hyprland window manager with Secure/Dual-boot support for Windows
 { config, pkgs, lib, refind-gruvbox-theme, ... }:
 
@@ -11,7 +11,7 @@
 # ===== BOOTLOADER - rEFInd WITH GRUVBOX THEME ======
  boot.loader = {
    # Disable systemd boot and grub
-   systemd-boot.enable = false;
+   systemd-boot.enable = true;
    grub.enable = false;
 
    # EFI configuration
@@ -22,7 +22,7 @@
    
    # Enable rEFInd (using built-in NixOS support)
    refind = {
-     enable = true;
+     enable =false;
    }; 
 };
 
@@ -70,6 +70,8 @@ EOF
   };
 	
 
+ # ====== FLATPAK ======
+  services.flatpak.enable = true;
  # ====== KERNEL - Latest Linux headers ======
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelParams = [
@@ -82,6 +84,10 @@ EOF
  ];
  # Early KMS for AMD
  boot.initrd.kernelModules = [ "amdgpu" ];
+
+ # Support for some USB (Kobo) devices
+ services.udisks2.enable = true;
+
  # ====== NETWORKING - Wired only ======
  networking.hostName = "NixOS";
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -260,9 +266,13 @@ EOF
     neofetch
     tree
     unzip
+    gparted
     zip
     pciutils
     usbutils
+    freetype
+    fontconfig
+    gh
 
     # Hyprland
     waybar
@@ -331,6 +341,8 @@ EOF
    noto-fonts-cjk-sans
    noto-fonts-color-emoji
    liberation_ttf
+   freefont_ttf
+   dejavu_fonts
    fira-code
    fira-code-symbols
    font-awesome
@@ -339,9 +351,12 @@ EOF
  ];
 
  # ===== GAMING =====
- programs.steam = {
-   enable = true;
-   remotePlay.openFirewall = true;
+  programs.steam = {
+    enable = true;
+    # This creates an FHS environment for Steam
+    extraCompatPackages = with pkgs; [
+      proton-ge-bin
+    ];
  };
  # GameMode for performace
  programs.gamemode.enable = true;
@@ -369,7 +384,7 @@ EOF
  boot.loader.systemd-boot.configurationLimit = 2;
  boot.loader.timeout = 5;
  # NTFS support
- boot.supportedFilesystems = [ "ntfs" ];
+ boot.supportedFilesystems = [ "ntfs" "btrfs" ];
 
  # ===== PERFORMACE OPTIONS ======
  powerManagement.cpuFreqGovernor = "performance";
@@ -395,17 +410,6 @@ EOF
   };
  # ===== ZSH =====
  programs.zsh.enable = true;
- system.stateVersion = "25.05"; 
- 
- # ===== FILESYSTEM MOUNTS - BASE SYSTEM MOUNTS PRESENT IN HARDWARECONFIG.nix=====
- fileSystems."/home/kellen/Games/extra_drive" = {
-   device = "ddd171d0-18a1-46ca-ae7c-26bcdeb461fa";
-   fsType = "btrfs";
-   options = [
-   	"defaults"
-	"nofail"
-	"x-systemd.automount"
-	];
-};
+ system.stateVersion = "25.05";  
 }
 
