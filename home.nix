@@ -27,7 +27,7 @@
 
     # ProtonVPN
     wireguard-tools
-    protonvpn-gui
+    #protonvpn-gui
 
     # Office
     libreoffice-qt
