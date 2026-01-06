@@ -14,18 +14,29 @@
   boot.extraModulePackages = [ ];
 
   fileSystems."/" =
-    { device = "/dev/disk/by-uuid/5f36d528-06f5-4742-9096-7996eb5c6266";
+    { device = "/dev/disk/by-uuid/aadd15fe-89d5-4a14-9e1e-c552adbcee7b";
       fsType = "ext4";
     };
 
+  fileSystems."/home/kellen/Games/extra_drive" =
+    { device = "/dev/disk/by-uuid/a74e4c3c-cce2-40a9-ab4f-0af718629154";
+      fsType = "ext4";
+    };
+
+  fileSystems."/home/kellen/docker_home_server-main/media/extra_storage" =
+    { device = "/dev/disk/by-uuid/2420df2d-9d37-4359-bfaa-853510ab98f7";
+      fsType = "ext4";
+    };
+
+
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/3CE4-983B";
+    { device = "/dev/disk/by-uuid/C734-F637";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
   swapDevices =
-    [ { device = "/dev/disk/by-uuid/2dc27208-5a0d-4892-bc58-ac98adeeeb7a"; }
+    [ { device = "/dev/disk/by-uuid/a47cc5c0-0026-4154-a4af-f4469681eaeb"; }
     ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
@@ -35,7 +46,6 @@
   networking.useDHCP = lib.mkDefault true;
   # networking.interfaces.enp14s0.useDHCP = lib.mkDefault true;
   # networking.interfaces.enp15s0u1u4u4.useDHCP = lib.mkDefault true;
-  # networking.interfaces.wlp15s0u1u4u3.useDHCP = lib.mkDefault true;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

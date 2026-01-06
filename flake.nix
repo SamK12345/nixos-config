@@ -4,18 +4,27 @@
   description = "AMD Desktop NixOS Configuration with Hyprland";
 
   inputs = {
-    # Nixpkgs
+    # Nixpkgs - Using STABLE 25.05 to avoid Wine breakage in unstable
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     
-    # Home Manager
+    # Home Manager - use the release that matches nixpkgs
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
+    # NixVim
+    nixvim = {
+    	url = "github:nix-community/nixvim";
+	inputs.nixpkgs.follows = "nixpkgs";
+	};  
     # Hyprland
     hyprland.url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
-    
+    # NUR
+    nur = {
+    	url = "github:nix-community/NUR";
+	inputs.nixpkgs.follows = "nixpkgs";
+       };
+
     # Lanzaboote for Secure Boot
     lanzaboote = {
       url = "github:nix-community/lanzaboote";
@@ -29,7 +38,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, hyprland, lanzaboote, refind-gruvbox-theme, ... }@inputs: {
+  outputs = { self, nixpkgs, nixvim, home-manager, hyprland, lanzaboote, refind-gruvbox-theme, ... }@inputs: {
     nixosConfigurations = {
       # CHANGE 'nixOS' to your hostname if different
       nixOS = nixpkgs.lib.nixosSystem {
@@ -71,6 +80,11 @@
             
             # IMPORTANT: Change 'yourusername' to your actual username!
             home-manager.users.kellen = import ./home.nix;
+            
+            # NixVim temporarily disabled - uncomment when switching back to unstable
+             home-manager.sharedModules = [
+             nixvim.homeManagerModules.nixvim
+             ];
             
             # Pass inputs to home-manager
             home-manager.extraSpecialArgs = { inherit inputs; };

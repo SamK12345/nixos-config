@@ -20,56 +20,58 @@
      efiSysMountPoint = "/boot";
    };
    
-   # Enable rEFInd (using built-in NixOS support)
-   refind = {
-     enable =false;
-   }; 
-};
-
-  # Install rEFInd Gruvbox theme manually
-  system.activationScripts.refind-theme = {
-    text = ''
-      # Create themes directory if it doesn't exist
-      mkdir -p /boot/EFI/refind/themes
-      
-      # Copy the Gruvbox theme
-      ${pkgs.rsync}/bin/rsync -av --delete \
-        ${refind-gruvbox-theme}/ \
-        /boot/EFI/refind/themes/refind-gruvbox-theme/
-      
-      # Create or update refind.conf with theme
-      REFIND_CONF="/boot/EFI/refind/refind.conf"
-      
-      # Check if theme is already included
-      if ! grep -q "refind-gruvbox-theme/theme.conf" "$REFIND_CONF" 2>/dev/null; then
-        echo "" >> "$REFIND_CONF"
-        echo "# Gruvbox Theme" >> "$REFIND_CONF"
-        echo "include themes/refind-gruvbox-theme/theme.conf" >> "$REFIND_CONF"
-      fi
-      
-      # Add custom configuration if not already present
-      if ! grep -q "# Custom NixOS Configuration" "$REFIND_CONF" 2>/dev/null; then
-        cat >> "$REFIND_CONF" << 'EOF'
-
+#   # Enable rEFInd (using built-in NixOS support)
+#   refind = {
+#     enable =false;
+#   }; 
+#};
+#
+#  # Install rEFInd Gruvbox theme manually
+#  system.activationScripts.refind-theme = {
+#    text = ''
+#      # Create themes directory if it doesn't exist
+#      mkdir -p /boot/EFI/refind/themes
+#      
+#      # Copy the Gruvbox theme
+#      ${pkgs.rsync}/bin/rsync -av --delete \
+#        ${refind-gruvbox-theme}/ \
+#        /boot/EFI/refind/themes/refind-gruvbox-theme/
+#      
+#      # Create or update refind.conf with theme
+#      REFIND_CONF="/boot/EFI/refind/refind.conf"
+#      
+#      # Check if theme is already included
+#      if ! grep -q "refind-gruvbox-theme/theme.conf" "$REFIND_CONF" 2>/dev/null; then
+#        echo "" >> "$REFIND_CONF"
+#        echo "# Gruvbox Theme" >> "$REFIND_CONF"
+#        echo "include themes/refind-gruvbox-theme/theme.conf" >> "$REFIND_CONF"
+#      fi
+#      
+#      # Add custom configuration if not already present
+#      if ! grep -q "# Custom NixOS Configuration" "$REFIND_CONF" 2>/dev/null; then
+#        cat >> "$REFIND_CONF" << 'EOF'
+#
 # Custom NixOS Configuration
-timeout 5
-hideui hints,arrows,badges
-big_icon_size 256
-small_icon_size 96
-showtools shutdown,reboot,memtest,mok_tool,firmware
-scanfor manual,external,optical,netboot
-
-# Windows menuentry (adjust path if needed)
-menuentry "Windows" {
-  icon /EFI/refind/themes/refind-gruvbox-theme/icons/os_win.png
-  loader /EFI/Microsoft/Boot/bootmgfw.efi
-}
-EOF
-      fi
-    '';
-  };
-	
-
+#timeout 5
+#hideui hints,arrows,badges
+#big_icon_size 256
+#small_icon_size 96
+#showtools shutdown,reboot,memtest,mok_tool,firmware
+#scanfor manual,external,optical,netboot
+#
+## Windows menuentry (adjust path if needed)
+#menuentry "Windows" {
+#  icon /EFI/refind/themes/refind-gruvbox-theme/icons/os_win.png
+#  loader /EFI/Microsoft/Boot/bootmgfw.efi
+#}
+#EOF
+#      fi
+#    '';
+ };
+#	
+ 
+ # ===== KDE ======
+ services.desktopManager.plasma6.enable = true;
  # ====== FLATPAK ======
   services.flatpak.enable = true;
  # ====== KERNEL - Latest Linux headers ======
@@ -79,12 +81,14 @@ EOF
 	"amdgpu.dc=1"
 	"amdgpu.ppfeaturemask=0xffffffff"
 	"mitigations=off"
+	"amdgpu.freesync_video=1"
 	"quiet"
 	"splash"
  ];
  # Early KMS for AMD
  boot.initrd.kernelModules = [ "amdgpu" ];
-
+ programs.appimage.enable = true;
+ programs.appimage.binfmt = true;
  # Support for some USB (Kobo) devices
  services.udisks2.enable = true;
 
@@ -168,15 +172,20 @@ EOF
  # ===== AMD OPTIMIZATIONS ======
  hardware.graphics = {
    enable = true;
+   # CRITICAL: Enable 32-bit support for Wine/Proton
+   enable32Bit = true;
 
    extraPackages = with pkgs; [
      rocmPackages.clr.icd
      
      # Video Acceleration
-     libva
      libvdpau-va-gl
   ];
- # 32-bit driver binaries
+  
+  # 32-bit packages for Wine/Proton
+  extraPackages32 = with pkgs.driversi686Linux; [
+    libvdpau-va-gl
+  ];
  };
  
  # AMDGPU Envs
@@ -191,6 +200,9 @@ EOF
    # Waylan-specific envs
    WLR_NO_HARDWARE_CURSORS = "1";
    NIXOS_OZONE_WL = "1";
+   
+   # FreeType settings for Wine/Proton
+   FREETYPE_PROPERTIES = "truetype:interpreter-version=35";
  };
 
  # ===== AUDIO - PIPEWIRE ======
@@ -238,13 +250,16 @@ EOF
     openFirewall = true;
  };
 
-  # ===== USERS =====
+  # ===== USERS & UINPUT =====
+  users.groups.uinput = {}; 
+
   users.users.kellen = {
     isNormalUser = true;
     description = "kellen";
     extraGroups = [ 
     "networkmanager" 
     "wheel"
+    "uinput"
     "video" 
     "audio"
     "docker"
@@ -252,25 +267,41 @@ EOF
     "render"
     "storage"
   ];
- };
+ };  
+
+ services.udev.extraRules = ''
+    # uinput for Steam Input
+    KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput", GROUP="uinput", MODE="0660"
+    
+    # hidraw devices for controllers
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0660", GROUP="input"
+  '';
+  
 
   # ===== SYSTEM PACKAGES ======
   environment.systemPackages = with pkgs; [
+    # Keep steam-run for manual use if needed
+    steam-run
     # System Packages
     wget 
     curl 
     git
     neovim
+    python3
     htop
     btop
     neofetch
     tree
     unzip
-    gparted
     zip
+    kdePackages.partitionmanager
     pciutils
     usbutils
     freetype
+    appimage-run
+    zstd
+    glib
+    libz
     fontconfig
     gh
 
@@ -327,7 +358,10 @@ EOF
     # Gaming tools
     mangohud
     gamemode 
-    steam
+    # Note: steam is provided by programs.steam
+    # steam-run with proper 32-bit libraries (see below)
+    wineWowPackages.staging
+    winetricks
     lutris
     protonup-qt
     
@@ -341,6 +375,8 @@ EOF
    noto-fonts-cjk-sans
    noto-fonts-color-emoji
    liberation_ttf
+   corefonts
+   vista-fonts
    freefont_ttf
    dejavu_fonts
    fira-code
@@ -353,11 +389,20 @@ EOF
  # ===== GAMING =====
   programs.steam = {
     enable = true;
-    # This creates an FHS environment for Steam
+    
+    # CRITICAL: Use the built-in protontricks module - it's properly wrapped with steam-run
+    protontricks.enable = true;
+    
+    # Proton-GE from nixpkgs (declarative, properly integrated)
     extraCompatPackages = with pkgs; [
       proton-ge-bin
     ];
+    
+    # Enable GameScope for better gaming experience
+    gamescopeSession.enable = true;
  };
+ 
+   hardware.steam-hardware.enable = true;
  # GameMode for performace
  programs.gamemode.enable = true;
  
@@ -412,4 +457,3 @@ EOF
  programs.zsh.enable = true;
  system.stateVersion = "25.05";  
 }
-

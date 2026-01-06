@@ -7,7 +7,10 @@
   home.stateVersion = "25.05";
 
   programs.home-manager.enable = true;
-
+  # ===== IMPORTS ======
+  imports = [
+ 	./nixvim-config.nix
+	];
   # ===== PACKAGES =====
   home.packages = with pkgs; [
     # CLI tools
@@ -15,57 +18,71 @@
     fd
     bat
     eza
+    freetype
     fzf
     btop
     unzip
     zip
-    
+    ripgrep
+    fd
     # Wayland screenshot tools
     grim        # Screenshot
     slurp       # Select area
     swappy      # Annotate screenshots
-
+    # Wayland wallpapers 
+    swww
     # ProtonVPN
     wireguard-tools
-    #protonvpn-gui
-
+    protonvpn-gui
     # Office
     libreoffice-qt
     # Media
     mpv
     imv         # Image viewer
-    
+    vlc
     # File manager
     xfce.thunar
-
+    # Email - Protonmail with neomutt # NEEDS WORKING ON
+    gnome-keyring
+    protonmail-bridge
+    neomutt
+    isync
+    msmtp
+    pass
     # MPD Clients
     rmpc
     mpc
-
     mpd-mpris
     playerctl
-
+    spotify
     # eBook management
     calibre
+    # LaTeX support
+    texlive.combined.scheme-medium # stay with medium config for now
+    # Text conversion
+    pandoc
     # Visualization 
     cava
-	
     # Extra gaming
+    wineWowPackages.waylandFull
+    heroic
     lutris
-    wineWowPackages.stable
-    protontricks
     bottles
+    evtest
     winetricks
-    
+    # protontricks is now managed by programs.steam.protontricks.enable in configuration.nix 
     # System
     networkmanagerapplet
     pavucontrol
     brightnessctl
-    
     # Clipboard
     wl-clipboard
     cliphist
-    
+    # Microsoft Teams (kill me) & zoom
+    zoom-us
+    teams-for-linux
+    # Discord
+    discord
     # Notifications
     libnotify
   ];
@@ -80,9 +97,13 @@
       monitor = [
         # Change to match your setup
 	       "HDMI-A-1,2560x1440@75,0x0,1"
-         "DP-1,2560x1440@240,2560x0,1"
+               "DP-2,2560x1440@239.76,2560x0,1,vrr,1"
+	       
       ];
       
+      misc = {
+        vrr =1;
+	};
       # Autostart
       exec-once = [
         "waybar"
@@ -276,7 +297,56 @@
       ];
     };
   };
-
+  # ===== SWW WALLPAPERS =====
+  # Wallpaper rotation script
+  home.file.".local/bin.wallpaper-rotate.sh" = {
+  	text = ''
+		#!/usr/bin/env bash
+		WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
+		WALLPAPER=$(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" \) | shuf -n 1)
+      		${pkgs.swww}/bin/swww img "$WALLPAPER" --transition-type random --transition-fps 60
+    		'';
+		executable = true;
+		};
+  # swww daemon
+  systemd.user.services.swww-daemon = {
+	Unit = {
+		Description = "swww daemon";
+		PartOf = [ "graphical-session.target" ];
+		After = [ "graphical-session.target" ];
+	};
+	Service = {
+		ExecStart = "${pkgs.swww}/bin/swww-daemon";
+		Restart = "on-failure";
+		};
+		Install.WantedBy = [ "graphical-session.target" ];
+	};
+  # Wallpaper rotation service - links with def. script above
+  systemd.user.services.wallpaper-rotate = {
+  	Unit = {
+		Description = "Rotate wallpaper"; 
+		After = [ "swww-daemon.service" ];
+	};
+	Service = {
+	Type = "oneshot";
+	ExecStart = "${config.home.homeDirectory}/.local/bin/wallpaper-rotate.sh";
+	};
+ };
+ # Timer for rotation 
+  systemd.user.timers.wallpaper-rotate = {
+  	Unit = {
+		Description = "Rotate wallpaper timer";
+		After = [ "swww-daemon.service" ];
+	       };
+	Timer = { 
+		OnStartupSec = "1min";
+		OnUnitActiveSec = "15min";
+		Persistent = true;
+	       };
+	       Install.WantedBy = [ "timers.target" ];
+	      };
+	
+ 
   # ===== WAYBAR CONFIGURATION =====
   programs.waybar = {
     enable = true;
@@ -550,7 +620,7 @@
       confirm_os_window_close = 0;
       enable_audio_bell = false;
       
-      # Catppuccin Mocha theme
+      # Gruvbox Mocha theme
       foreground = "#CDD6F4";
       background = "#32302F";
       selection_foreground = "#1E1E2E";
@@ -608,29 +678,43 @@
     };
   };
 
-  # ===== NEOVIM (Optional but recommended) =====
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
-    viAlias = true;
-    vimAlias = true;
-    
-    extraConfig = ''
-      set number
-      set relativenumber
-      set expandtab
-      set tabstop=2
-      set shiftwidth=2
-      colorscheme desert
-    '';
-  };
+ 
+  # ===== NIXVIM =====
+  # Temporarily disabled due to compatibility issues with nixos-25.05
+  # Uncomment once Wine issue is resolved and you can switch back to unstable
+  /*
+  programs.nixvim = {
+  	enable = true;
 
+	# enable lsp plugins
+	plugins.lsp.enable = true;
+
+	#plugin list
+	plugins = {
+		lualine.enable = true;
+		treesitter.enable = true;
+		telescope.enable = true;
+	};
+	# Colorschemes 
+	colorschemes.gruvbox.enable = true;
+	# Lua plugins
+	extraPlugins = with pkgs.vimPlugins; [
+		oil-nvim
+		harpoon2
+		];
+	extraConfigLua = ''
+		require('oil').setup()
+		require('harpoon').setup()
+		'';
+	};
+  */
+ 
   # ===== MUSIC PLAYER DAEMON ======
   services.mpd = {
     enable = true;
     
     # Music directory
-    musicDirectory = "~/.docker-media-server/media/music";
+    musicDirectory = "~/docker_home_server-main/media/music";
     
     # MPD database and state
     dataDir = "${config.home.homeDirectory}/.local/share/mpd";
@@ -826,7 +910,20 @@
       WantedBy = [ "default.target" ];
     };
   };
+  # ===== GPG KEYS =====
+  programs.gpg.enable = true;
+  services.gpg-agent = {
+  	enable = true;
+	pinentryPackage = pkgs.pinentry-qt;
+	enableSshSupport = true;
+ };
 
+ programs.password-store = {
+ 	enable = true;
+	settings = {
+		PASSWORD_STORE_DIR = "$HOME/.password-store";
+		};
+	};
 
   # ===== CUSTOM FILES =====
   # Wallpaper script
