@@ -289,7 +289,7 @@
     neovim
     python3
     htop
-    btop
+    btop-rocm
     neofetch
     tree
     unzip
@@ -303,7 +303,6 @@
     glib
     libz
     fontconfig
-    gh
 
     # Hyprland
     waybar

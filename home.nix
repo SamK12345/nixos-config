@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   # IMPORTANT: Change these!
@@ -34,6 +34,7 @@
     # ProtonVPN
     wireguard-tools
     protonvpn-gui
+    rocmPackages.rocm-smi
     # Office
     libreoffice-qt
     # Media
@@ -54,7 +55,6 @@
     mpc
     mpd-mpris
     playerctl
-    spotify
     # eBook management
     calibre
     # LaTeX support
@@ -86,7 +86,25 @@
     # Notifications
     libnotify
   ];
-
+  # ===== GitHub =====
+  programs.gh = {
+    enable = true;
+    gitCredentialHelper = {
+      enable = true;
+      };
+   };
+  # ===== Spicetify =====
+  programs.spicetify = 
+    let
+      spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.system};
+    in {
+      enable = true;
+      enabledExtensions = with spicePkgs.extensions; [
+        hidePodcasts
+        shuffle
+    ];
+    theme = spicePkgs.themes.text;
+  };
   # ===== HYPRLAND CONFIGURATION =====
   wayland.windowManager.hyprland = {
     enable = true;

@@ -22,7 +22,7 @@
     # NUR
     nur = {
     	url = "github:nix-community/NUR";
-	inputs.nixpkgs.follows = "nixpkgs";
+	    inputs.nixpkgs.follows = "nixpkgs";
        };
 
     # Lanzaboote for Secure Boot
@@ -36,9 +36,14 @@
       url = "github:delania-oliveira/refind-gruvbox-theme";
       flake = false;  # This is not a flake, just a plain repo
     };
+    
+    # spicetify
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+    };
   };
 
-  outputs = { self, nixpkgs, nixvim, home-manager, hyprland, lanzaboote, refind-gruvbox-theme, ... }@inputs: {
+  outputs = { self, nixpkgs, nixvim, home-manager, hyprland, lanzaboote, refind-gruvbox-theme, spicetify-nix, ... }@inputs: {
     nixosConfigurations = {
       # CHANGE 'nixOS' to your hostname if different
       nixOS = nixpkgs.lib.nixosSystem {
@@ -84,6 +89,7 @@
             # NixVim temporarily disabled - uncomment when switching back to unstable
              home-manager.sharedModules = [
              nixvim.homeManagerModules.nixvim
+             spicetify-nix.homeManagerModules.default
              ];
             
             # Pass inputs to home-manager
